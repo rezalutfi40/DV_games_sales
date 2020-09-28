@@ -1,0 +1,236 @@
+---
+title: "capstone"
+author: "Reza Lutfi Ismail"
+date: "9/7/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+call library 
+
+```{r}
+library(shiny)
+library(shinydashboard)
+library(tidyverse)
+library(plotly)
+library(scales)
+library(glue)
+library(DT)
+```
+
+Read Data csv
+
+```{r}
+vg <- read_csv("data/vgsales/vgsales.csv")
+vg
+```
+
+Visualisasi Top Publisher by sales
+
+```{r}
+sales_by_pub <- vg %>% 
+  select(Publisher, Year, NA_Sales, EU_Sales, JP_Sales, Other_Sales, Global_Sales) %>%
+  group_by(Publisher) %>% 
+  mutate(NA_Sales = sum(NA_Sales),
+         EU_Sales = sum(EU_Sales),
+         JP_Sales = sum(JP_Sales),
+         Other_Sales = sum(Other_Sales)) %>% 
+  pivot_longer(c("NA_Sales","EU_Sales","JP_Sales","Other_Sales"),names_to = "Sales",values_to = "Value") %>% 
+  distinct(Value, .keep_all = T) %>% 
+  arrange(-Global_Sales) %>%  
+  head(40)
+sales_by_pub
+```
+
+```{r}
+plot_sales_by_pub <- sales_by_pub %>% 
+  ggplot(aes(Value, reorder(Publisher, Value),
+             text = glue("Publisher: {Publisher}
+                         Sales: {Value}")))+
+  geom_col(position = "stack", aes(fill = Sales))+
+  labs(title = "Top 10 Publisher by Sales",
+       x = "Sales (in Million Copies)",
+       y = NULL)+
+  scale_y_discrete(labels = wrap_format(25))+
+  scale_fill_manual(values = c("chocolate1","gray40","black","firebrick"))+
+  theme_minimal()+
+  theme(legend.position = "none")
+plot_sales_by_pub
+```
+
+```{r}
+ggplotly(plot_sales_by_pub, tooltip = "text")
+```
+Visualisasi Top Games by Sales
+
+```{r}
+sales_by_name <- vg %>% 
+  select(Name, Year, Publisher, NA_Sales, EU_Sales, JP_Sales, Other_Sales, Global_Sales) %>%
+  group_by(Publisher) %>% 
+  pivot_longer(c("NA_Sales","EU_Sales","JP_Sales","Other_Sales"),names_to = "Sales",values_to = "Value") %>% 
+  arrange(-Global_Sales) %>% 
+  mutate(Sales = str_replace_all(Sales, pattern = "_",replacement = " ")) %>% 
+  head(40)
+sales_by_name
+```
+
+
+```{r}
+plot_sales_by_name <- sales_by_name %>% 
+  ggplot(aes(Value, reorder(Name, Value),
+             text = glue("Game: {Name}
+                         Sales: {Value}")))+
+  geom_col(position = "stack", aes(fill = Sales))+
+  labs(title = "Top 10 Games by Sales",
+       x = "Sales (in Million Copies)",
+       y = NULL)+
+  scale_y_discrete(labels = wrap_format(30))+
+  scale_fill_manual(values = c("chocolate1","gray40","black","firebrick"))+
+  theme_minimal()+
+  theme(legend.position = "top")
+plot_sales_by_name
+```
+
+
+```{r}
+ggplotly(plot_sales_by_name, tooltip = "text")
+```
+Visualisasi publisher sales by year
+
+```{r}
+sales_year_by_pub <- vg %>% 
+  select(Publisher, Year, Global_Sales) %>%
+  filter(Year == 2010) %>% 
+  group_by(Publisher) %>% 
+  mutate(aggregate(Global_Sales~Publisher, FUN = sum)) %>%  
+  arrange(-Global_Sales) %>%  
+  distinct(Publisher, .keep_all = T) %>% 
+  head(40)
+sales_year_by_pub
+```
+
+Visualisasi platform sales by year
+
+```{r}
+sales_year_by_plat <- vg %>% 
+  group_by(Platform) %>% 
+  select(Platform, Year, Global_Sales) %>% 
+  arrange(-Global_Sales) %>% 
+  head(10)
+sales_year_by_plat
+```
+
+```{r}
+
+sales_year_by_plat <- vg %>% 
+  filter(Year == 2012) %>% 
+  select(Platform, Year, Global_Sales) %>%
+  group_by(Platform) %>% 
+  mutate(aggregate(Global_Sales~Platform, FUN = sum)) %>% 
+  distinct(Platform, .keep_all = T) %>% 
+  arrange(-Global_Sales)
+
+sales_year_by_plat
+```
+
+```{r}
+sales_year_by_plat %>% 
+  ggplot(aes(Global_Sales, reorder(Platform, Global_Sales)))+
+  geom_col(aes(Global_Sales), fill = "firebrick")
+```
+
+Visualisasi Total Games Sales Each Year
+
+```{r}
+game_sales <- vg %>% 
+  select(Year, Publisher, Global_Sales) %>% 
+  group_by(Year) %>% 
+  mutate(aggregate(Global_Sales ~ Year, FUN = sum)) %>% 
+  distinct(Global_Sales, .keep_all = T)
+game_sales
+```
+
+```{r}
+plot_game_sales <- game_sales %>%
+  ggplot(aes(Year, Global_Sales, group = 1,
+         text = glue("Year: {Year}
+                     Global Sales: {Global_Sales}")))+
+  geom_line(color="black", size=1, alpha=0.9)+
+  geom_point()+
+  labs(x = "Year",
+       y = "Global Sales")+
+  scale_x_discrete(breaks = seq(1980,2020,5))+
+  theme_minimal()
+```
+
+
+```{r}
+ggplotly(plot_game_sales, tooltip = "text")
+```
+
+
+Visualisasi Correlation between global sales with na sales, eu sales, and jp sales
+
+
+```{r}
+cor <- vg %>% 
+  select(Genre, NA_Sales, EU_Sales, JP_Sales, Other_Sales, Global_Sales) %>% 
+  filter(Genre == "Role-Playing") %>% 
+  group_by(Genre)
+cor
+```
+
+
+```{r}
+plot_cor_eu <- cor %>% 
+  ggplot(aes(Global_Sales, EU_Sales))+
+  geom_jitter(col = "chocolate1")+
+  geom_smooth()+
+  labs(x = "Global Sales",
+       y = "EU Sales")+
+  theme_minimal()
+plot_cor_eu
+```
+```{r}
+cor(vg$JP_Sales, vg$Global_Sales)
+```
+
+```{r}
+cor(vg$NA_Sales, vg$Global_Sales)
+```
+```{r}
+cor(vg$EU_Sales, vg$Global_Sales)
+```
+```{r}
+sales_year_by_game <- vg %>% 
+  select(Name, Year, Global_Sales) %>%
+  group_by(Name) %>% 
+  mutate(aggregate(Global_Sales~Name, FUN = sum)) %>% 
+  arrange(-Global_Sales) %>% 
+  distinct(Name, .keep_all = T) %>% 
+  head(10)
+sales_year_by_game
+```
+
+Visualisasi top games sales by year
+
+```{r}
+plot_sales_year_by_game <- sales_year_by_game %>% 
+            ggplot(aes(Global_Sales, reorder(Name, Global_Sales),
+                       text = glue("Game: {Name}
+                                   Sales: {Global_Sales}")))+
+            geom_col(fill = "gray40")+
+            labs(x = "Sales (in Million Copies)",
+                 y = NULL)+
+            scale_y_discrete(labels = wrap_format(25))+
+            theme_minimal()+
+            theme(legend.position = "none")
+    
+        ggplotly(plot_sales_year_by_game, tooltip = "text")
+```
+
+
+

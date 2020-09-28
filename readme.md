@@ -23,3 +23,6 @@ find out the analysis of game sales from various platforms, publishers and genre
 - Wii sports was the best game sales by Name
 - Nort America was the most correlated game sales to total game sales in the world 
 - Japan was the most uncorrelated game sales to total game sales in the world  
+
+for detail, you can visit this link: 
+https://rezalutfi40.shinyapps.io/capstone_DV-games-sales-analysis/
